@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
+    <springProperty scope="context" name="springAppName" source="spring.application.name"/>
+    <springProperty scope="context" name="MASK" source="eda.api.mask.auditing"/>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <Pattern>%d{HH:mm:ss.SSS} [%thread] %-5level [${springAppName}-demo,%X{spanId}] %logger{36} - %msg%n
+            </Pattern>
+        </encoder>
+
+    </appender>
+    <appender name="LOG" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>127.0.0.1:5000</destination>
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp>
+                    <timeZone>UTC</timeZone>
+                </timestamp>
+                <version/>
+                <logLevel>
+                </logLevel>
+                <message/>
+                <loggerName/>
+                <threadName/>
+                <context/>
+                <mdc/>
+                <pattern>
+                    <pattern>
+                        {
+                        "type": "LOG",
+                        "trace": {
+                        "trace_id": "%X{traceId:-}",
+                        "span_id": "%X{spanId:-}",
+                        "parent_span_id": "%X{parentId:-}",
+                        "exportable": "%X{spanExportable:-}"
+                        }
+                        }
+                    </pattern>
+                </pattern>
+                <stackTrace/>
+            </providers>
+        </encoder>
+    </appender>
+
+    <appender name="AUDIT" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>127.0.0.1:5000</destination>
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers class="net.logstash.logback.composite.loggingevent.LoggingEventJsonProviders">
+                <timestamp>
+                    <timeZone>UTC</timeZone>
+                </timestamp>
+                <version/>
+                <logLevel>
+                </logLevel>
+
+                <loggerName/>
+                <threadName/>
+                <context/>
+                <mdc/>
+                <pattern>
+                    <pattern>
+                        {
+                        "output": "#asJson{%message}",
+                        "type": "AUDIT",
+                        "trace": {
+                        "trace_id": "%X{traceId:-}",
+                        "span_id": "%X{spanId:-}",
+                        "parent_span_id": "%X{parentId:-}",
+                        "exportable": "%X{spanExportable:-}"
+                        }
+                        }
+                    </pattern>
+                </pattern>
+                <stackTrace/>
+            </providers>
+            <jsonGeneratorDecorator class="net.logstash.logback.mask.MaskingJsonGeneratorDecorator">
+                <defaultMask>****</defaultMask>
+                <paths>${MASK}</paths>
+                <!--<valueMasker class="sa.com.stc.eda.core.auditing.AuditLogMasker"/>-->
+            </jsonGeneratorDecorator>
+        </encoder>
+    </appender>
+
+
+    <root level="INFO" additivity="false">
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="LOG"/>
+    </root>
+    <!--  <root level="INFO" additivity="false">
+          <appender-ref ref="AUDIT"/>
+      </root>-->
+    <logger name="com.core.auditing.AuditAspect" level="INFO" additivity="false">
+        <appender-ref ref="AUDIT"/>
+    </logger>
+</configuration>
